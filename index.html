@@ -1,0 +1,177 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Traxxis Fuel Waste &amp; Idle Cost</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet"/>
+<link href="addin.css" rel="stylesheet"/>
+</head>
+<body>
+<div id="fuelWasteIdleCost" style="display:none;">
+<div id="app">
+  <div class="controls-section">
+    <div class="top-toolbar">
+      <div class="title-block">
+        <div class="page-title">Fuel Waste &amp; Idle Cost</div>
+        <div class="page-meta" id="lastUpdatedLabel">Waiting for first analysis</div>
+      </div>
+      <div class="toolbar-actions">
+        <button id="rulesButton" class="btn btnSecondary" type="button">How This Dashboard Works</button>
+        <button id="exportButton" class="btn btnSecondary">Export CSV</button>
+        <button id="exportPdfButton" class="btn btnSecondary">Export PDF</button>
+        <button id="retryButton" class="btn btnSecondary hidden">Retry</button>
+        <button id="refreshButton" class="btn btnPrimary">Refresh Analysis</button>
+      </div>
+    </div>
+    <p class="page-copy">See how much fuel your fleet is using, how much idling may be costing, and which vehicles are creating the biggest fuel waste over the last 6 months.</p>
+    <div id="rulesPanel" class="rulesPanel hidden">
+      <p class="rulesTitle">How This Dashboard Works</p>
+      <ul class="rulesList">
+        <li><strong>Date range</strong>: the dashboard reviews the last 6 months of fuel, trip, idle, and stop activity.</li>
+        <li><strong>Current view</strong>: every card, chart, hot spot, and vehicle result updates to match the group and efficiency filters you choose.</li>
+        <li><strong>Total fuel used</strong>: adds up recorded fuel use across the current 6-month view.</li>
+        <li><strong>Fleet MPG and vehicle MPG</strong>: uses trip distance divided by total fuel used, so idling affects MPG the same way it affects real-world fuel economy.</li>
+        <li><strong>Idle fuel used</strong>: uses recorded idle fuel when available. If it is missing, the dashboard estimates idle fuel from idle time and the burn rate you set.</li>
+        <li><strong>Idle cost</strong>: multiplies idle fuel by the fuel price you choose.</li>
+        <li><strong>Idle hot spots</strong>: groups stopped locations where idling happened most often and lets you open each location to see which vehicles are driving the total.</li>
+        <li><strong>Efficiency status</strong>: <strong>Top priority</strong> means idle cost is at least $250 or idle share is at least 30%. <strong>Monitor</strong> means idle cost is at least $100 or idle share is at least 15%. <strong>Strong efficiency</strong> means the vehicle is below those thresholds.</li>
+        <li><strong>Trending</strong>: compares this month&rsquo;s projected full-month pace with last month so you can quickly see whether fuel cost and idle cost are heading up or down.</li>
+        <li><strong>CO2 produced</strong>: estimates tailpipe emissions from the fuel used and the fuel type you select.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="loadingState" class="loading-state">
+    <div class="spinner-ring"></div>
+    <div id="loadingTitle" class="loading-title">Loading fuel and idle analysis...</div>
+    <div id="loadingDetail" class="loading-detail">Fetching fuel, trip, and idle activity for the last 6 months.</div>
+  </div>
+
+  <div id="noticeBanner" class="notice-banner hidden"></div>
+
+  <div id="resultsShell" class="results-shell" style="display:none;">
+    <div id="storyStrip" class="storyGrid">
+      <div class="storyCard"><div class="storyLabel">Fleet story</div><div class="storyValue">Running analysis</div><div class="storyCopy">We are building your top fleet takeaways now.</div></div>
+    </div>
+
+    <div class="summaryGrid">
+      <div class="summaryCard neutral"><div class="labelRow"><p class="label">Fleet Fuel Used</p></div><p class="value" id="fleetFuelUsed">0 gal</p><div class="sub" id="fleetFuelSub">Last 6 months</div></div>
+      <div class="summaryCard infoBg"><div class="labelRow"><p class="label">Fleet MPG</p></div><p class="value" id="fleetMpg">N/A</p><div class="sub" id="fleetMpgSub">Waiting for trip distance data</div></div>
+      <div class="summaryCard criticalBg"><div class="labelRow"><p class="label">Fuel Cost</p></div><p class="value" id="fleetFuelCost">$0</p><div class="sub" id="fleetCostSub">Based on current settings</div></div>
+      <div class="summaryCard warningBg"><div class="labelRow"><p class="label">Idle Cost</p></div><p class="value" id="fleetIdleCost">$0</p><div class="sub" id="fleetIdleSub">Idle waste over 6 months</div></div>
+      <div class="summaryCard healthyBg"><div class="labelRow"><p class="label">CO2 Produced</p></div><p class="value" id="fleetCo2">0 kg</p><div class="sub" id="fleetCo2Sub">Tailpipe estimate</div></div>
+    </div>
+
+    <div class="filters-section">
+      <div class="controls">
+        <div class="filter-group">
+          <span class="controlLabel">Group</span>
+          <select id="groupFilter" class="select"></select>
+        </div>
+        <div class="filter-group">
+          <span class="controlLabel">Efficiency</span>
+          <select id="statusFilter" class="select">
+            <option value="__all__">All vehicles</option>
+            <option value="high">Top priority</option>
+            <option value="medium">Monitor</option>
+            <option value="low">Strong efficiency</option>
+          </select>
+        </div>
+        <div class="filter-group filter-group--search">
+          <span class="controlLabel">Search</span>
+          <input id="searchFilter" class="search" type="text" placeholder="Search vehicle..." />
+        </div>
+      </div>
+      <div class="settingsGrid">
+        <div class="settingCard"><span class="controlLabel">Fuel Type</span><select id="fuelTypeInput" class="select"><option value="diesel">Diesel</option><option value="gasoline">Gasoline</option></select><div class="settingHint">This helps estimate emissions for the fuel your fleet uses.</div></div>
+        <div class="settingCard"><span class="controlLabel">Fuel Price</span><input id="fuelPriceInput" class="numberInput" type="number" step="0.01" min="0" value="4.75" /><div class="settingHint" id="fuelPriceHint">Starts at the current 6-month U.S. average and can be edited any time.</div></div>
+        <div class="settingCard"><span class="controlLabel">Units</span><select id="priceUnitInput" class="select"><option value="gallon">Per gallon</option><option value="liter">Per liter</option></select><div class="settingHint" id="priceUnitHint">Choose imperial or metric units for the dashboard.</div></div>
+        <div class="settingCard"><span class="controlLabel">Idle Burn Rate</span><input id="idleBurnRateInput" class="numberInput" type="number" step="0.1" min="0" value="0.9" /><div class="settingHint" id="idleBurnRateHint">Use this when recorded idle fuel is not available.</div></div>
+        <div class="settingCard"><span class="controlLabel">Update Dashboard</span><button id="applySettingsButton" class="btn btnSecondary" type="button">Refresh Totals</button><div class="settingHint" id="settingsSummary">These settings change the cost and emissions shown in the dashboard.</div></div>
+      </div>
+    </div>
+
+    <div class="panelSection">
+      <p class="sectionEyebrow">Six-Month Trend</p>
+      <div class="sortHint">The top chart shows fuel used by month. The bottom chart shows idle cost by month. In the table, click any arrow to sort.</div>
+      <div id="fleetTrendChart"></div>
+    </div>
+
+    <div class="panelSection">
+      <p class="sectionEyebrow">Idle Hot Spots</p>
+      <div class="sectionHelper">These locations show where your fleet is spending the most time idling while stopped. Click a row to see which vehicles are driving the total.</div>
+      <div class="tableWrap tableWrap--compact">
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th>Location</th>
+              <th>Idle Cost</th>
+              <th>Idle Hours</th>
+              <th>Vehicles</th>
+              <th>Stops</th>
+            </tr>
+          </thead>
+          <tbody id="hotspotBody">
+            <tr><td colspan="5" class="empty">No idle hot spots are available yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tableWrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th><button class="sortHead" type="button" data-sort="name"><span>Vehicle</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="offenderLevel"><span>Efficiency</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="fuelLiters"><span>Fuel Used</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="mpg"><span>MPG</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="fuelCost"><span>Fuel Cost</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="idleHours"><span>Idle Hours</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="idleFuelLiters"><span>Idle Fuel</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="idleCost"><span>Idle Cost</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="co2Kg"><span>CO2</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="idleShare"><span>Idle Share</span><span class="sortArrow"></span></button></th>
+            <th><button class="sortHead" type="button" data-sort="idleCostTrendDelta"><span>Trend</span><span class="sortArrow"></span></button></th>
+            <th>Review</th>
+          </tr>
+        </thead>
+        <tbody id="vehicleTableBody">
+          <tr><td colspan="12" class="empty">No analysis has been run yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="reviewModal" class="modalShell hidden" aria-hidden="true">
+      <div class="modalCard">
+        <div class="modalTop">
+          <div>
+            <p class="modalEyebrow">Vehicle Fuel Review</p>
+            <h2 id="reviewTitle" class="modalTitle">Select a vehicle</h2>
+            <div id="reviewMeta" class="reviewMeta"></div>
+            <p id="reviewCopy" class="modalCopy">Open a vehicle to see where fuel is being used, how much idling may be costing, and whether this month is trending up or down below the table.</p>
+          </div>
+          <div class="reviewMeta reviewActions"><button id="closeReviewButton" class="closeBtn" type="button">Close Review</button></div>
+        </div>
+        <div class="kpiGrid">
+          <div class="kpi"><div class="kpiLabel">Fuel Used</div><div id="reviewFuelUsed" class="kpiValue">N/A</div><div class="kpiSub">Last 6 months</div></div>
+          <div class="kpi"><div class="kpiLabel">MPG</div><div id="reviewMpg" class="kpiValue">N/A</div><div class="kpiSub">Trip distance vs fuel used</div></div>
+          <div class="kpi"><div class="kpiLabel">Fuel Cost</div><div id="reviewFuelCost" class="kpiValue">N/A</div><div class="kpiSub">Based on current pricing</div></div>
+          <div class="kpi"><div class="kpiLabel">Idle Cost</div><div id="reviewIdleCost" class="kpiValue">N/A</div><div class="kpiSub">Estimated or actual idle fuel</div></div>
+          <div class="kpi"><div class="kpiLabel">CO2</div><div id="reviewCo2" class="kpiValue">N/A</div><div class="kpiSub">Tailpipe estimate</div></div>
+        </div>
+        <div class="reviewGrid">
+          <div class="reviewSection"><h3>Monthly Fuel Used</h3><div id="reviewTrendChart"></div></div>
+          <div class="reviewSection"><h3>What This Means</h3><ul id="reviewNarrative" class="narrativeList"></ul></div>
+          <div class="reviewSection"><h3>Monthly Idle Cost</h3><div id="reviewDailyChart"></div></div>
+          <div class="reviewSection"><h3>Key Takeaways</h3><ul id="reviewEvents" class="eventList"></ul></div>
+          <div class="reviewSection reviewSection--analysis"><h3>Recommended Next Steps</h3><div id="reviewSplit" class="splitNote"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="addin.js"></script>
+</body>
+</html>
