@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -24,7 +24,7 @@
         <button id="refreshButton" class="btn btnPrimary">Refresh Analysis</button>
       </div>
     </div>
-    <p class="page-copy">See how much fuel your fleet is using, how much idling may be costing, and which vehicles are creating the biggest fuel waste over the last 6 months.</p>
+
     <div id="rulesPanel" class="rulesPanel hidden">
       <p class="rulesTitle">How This Dashboard Works</p>
       <ul class="rulesList">
@@ -92,13 +92,18 @@
       </div>
     </div>
 
-    <div class="panelSection">
+    <div class="insightToggles">
+      <button id="toggleTrendButton" class="btn btnSecondary insightToggleButton" type="button" aria-expanded="false">Show Six-Month Trend</button>
+      <button id="toggleHotspotsButton" class="btn btnSecondary insightToggleButton" type="button" aria-expanded="false">Show Idle Hot Spots</button>
+    </div>
+
+    <div id="trendPanelSection" class="panelSection hidden">
       <p class="sectionEyebrow">Six-Month Trend</p>
       <div class="sortHint">The top chart shows fuel used by month. The bottom chart shows idle cost by month. In the table, click any arrow to sort.</div>
       <div id="fleetTrendChart"></div>
     </div>
 
-    <div class="panelSection">
+    <div id="hotspotPanelSection" class="panelSection hidden">
       <p class="sectionEyebrow">Idle Hot Spots</p>
       <div class="sectionHelper">These locations show where your fleet is spending the most time idling while stopped. Click a row to see which vehicles are driving the total.</div>
       <div class="tableWrap tableWrap--compact">
@@ -143,8 +148,9 @@
       </table>
     </div>
 
-    <div id="reviewModal" class="modalShell hidden" aria-hidden="true">
-      <div class="modalCard">
+    <div id="reviewHost">
+      <div id="reviewModal" class="modalShell hidden" aria-hidden="true">
+        <div class="modalCard">
         <div class="modalTop">
           <div>
             <p class="modalEyebrow">Vehicle Fuel Review</p>
@@ -167,6 +173,7 @@
           <div class="reviewSection"><h3>Monthly Idle Cost</h3><div id="reviewDailyChart"></div></div>
           <div class="reviewSection"><h3>Key Takeaways</h3><ul id="reviewEvents" class="eventList"></ul></div>
           <div class="reviewSection reviewSection--analysis"><h3>Recommended Next Steps</h3><div id="reviewSplit" class="splitNote"></div></div>
+        </div>
         </div>
       </div>
     </div>
