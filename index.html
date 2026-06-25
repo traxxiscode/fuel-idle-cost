@@ -17,6 +17,41 @@
         <div class="page-meta" id="lastUpdatedLabel">Waiting for first analysis</div>
       </div>
       <div class="toolbar-actions">
+        <div class="dpick-wrap" id="dpickWrap">
+          <button class="dpick-btn" id="dpickBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8"  y1="2" x2="8"  y2="6"/>
+              <line x1="3"  y1="10" x2="21" y2="10"/>
+            </svg>
+            <span id="dpickLabel">Custom</span>
+          </button>
+          <div class="dpick-drop" id="dpickDrop">
+            <div class="dpick-title">Custom Date Range</div>
+            <div class="dpick-row">
+              <div class="dpick-field">
+                <label>Start Date</label>
+                <div class="dpick-selects">
+                  <select class="dsel dsel-mo" id="sMo"></select>
+                  <select class="dsel dsel-dy" id="sDy"></select>
+                  <select class="dsel dsel-yr" id="sYr"></select>
+                </div>
+              </div>
+              <div class="dpick-field">
+                <label>End Date</label>
+                <div class="dpick-selects">
+                  <select class="dsel dsel-mo" id="eMo"></select>
+                  <select class="dsel dsel-dy" id="eDy"></select>
+                  <select class="dsel dsel-yr" id="eYr"></select>
+                </div>
+              </div>
+            </div>
+            <div class="dpick-err" id="dpickErr"></div>
+            <button class="dpick-apply" id="dpickApply" type="button">Apply Range</button>
+            <button class="dpick-clear" id="dpickClear" type="button" style="display:none;">&#x2715; Clear custom range</button>
+          </div>
+        </div>
         <button id="rulesButton" class="btn btnSecondary" type="button">How This Dashboard Works</button>
         <button id="exportButton" class="btn btnSecondary">Export CSV</button>
         <button id="exportPdfButton" class="btn btnSecondary">Export PDF</button>
@@ -28,9 +63,9 @@
     <div id="rulesPanel" class="rulesPanel hidden">
       <p class="rulesTitle">How This Dashboard Works</p>
       <ul class="rulesList">
-        <li><strong>Date range</strong>: the dashboard reviews the last 6 months of fuel, trip, idle, and stop activity.</li>
+        <li><strong>Date range</strong>: the dashboard reviews the last 6 months by default. Use Custom to select another date range for fuel, trip, idle, and stop activity.</li>
         <li><strong>Current view</strong>: every card, chart, hot spot, and vehicle result updates to match the group and efficiency filters you choose.</li>
-        <li><strong>Total fuel used</strong>: adds up recorded fuel use across the current 6-month view.</li>
+        <li><strong>Total fuel used</strong>: adds up recorded fuel use across the current selected view.</li>
         <li><strong>Fleet MPG and vehicle MPG</strong>: uses trip distance divided by total fuel used, so idling affects MPG the same way it affects real-world fuel economy.</li>
         <li><strong>Idle fuel used</strong>: uses recorded idle fuel when available. If it is missing, the dashboard estimates idle fuel from idle time and the burn rate you set.</li>
         <li><strong>Idle cost</strong>: multiplies idle fuel by the fuel price you choose.</li>
@@ -45,7 +80,7 @@
   <div id="loadingState" class="loading-state">
     <div class="spinner-ring"></div>
     <div id="loadingTitle" class="loading-title">Loading fuel and idle analysis...</div>
-    <div id="loadingDetail" class="loading-detail">Fetching fuel, trip, and idle activity for the last 6 months.</div>
+    <div id="loadingDetail" class="loading-detail">Fetching fuel, trip, and idle activity for the selected range.</div>
   </div>
 
   <div id="noticeBanner" class="notice-banner hidden"></div>
@@ -56,7 +91,7 @@
     </div>
 
     <div class="summaryGrid">
-      <div class="summaryCard neutral"><div class="labelRow"><p class="label">Fleet Fuel Used</p></div><p class="value" id="fleetFuelUsed">0 gal</p><div class="sub" id="fleetFuelSub">Last 6 months</div></div>
+      <div class="summaryCard neutral"><div class="labelRow"><p class="label">Fleet Fuel Used</p></div><p class="value" id="fleetFuelUsed">0 gal</p><div class="sub" id="fleetFuelSub">Selected range</div></div>
       <div class="summaryCard infoBg"><div class="labelRow"><p class="label">Fleet MPG</p></div><p class="value" id="fleetMpg">N/A</p><div class="sub" id="fleetMpgSub">Waiting for trip distance data</div></div>
       <div class="summaryCard criticalBg"><div class="labelRow"><p class="label">Fuel Cost</p></div><p class="value" id="fleetFuelCost">$0</p><div class="sub" id="fleetCostSub">Based on current settings</div></div>
       <div class="summaryCard warningBg"><div class="labelRow"><p class="label">Idle Cost</p></div><p class="value" id="fleetIdleCost">$0</p><div class="sub" id="fleetIdleSub">Idle waste over 6 months</div></div>
@@ -93,12 +128,12 @@
     </div>
 
     <div class="insightToggles">
-      <button id="toggleTrendButton" class="btn btnSecondary insightToggleButton" type="button" aria-expanded="false">Show Six-Month Trend</button>
+      <button id="toggleTrendButton" class="btn btnSecondary insightToggleButton" type="button" aria-expanded="false">Show Monthly Trend</button>
       <button id="toggleHotspotsButton" class="btn btnSecondary insightToggleButton" type="button" aria-expanded="false">Show Idle Hot Spots</button>
     </div>
 
     <div id="trendPanelSection" class="panelSection hidden">
-      <p class="sectionEyebrow">Six-Month Trend</p>
+      <p class="sectionEyebrow">Monthly Trend</p>
       <div class="sortHint">The top chart shows fuel used by month. The bottom chart shows idle cost by month. In the table, click any arrow to sort.</div>
       <div id="fleetTrendChart"></div>
     </div>
@@ -161,7 +196,7 @@
           <div class="reviewMeta reviewActions"><button id="closeReviewButton" class="closeBtn" type="button">Close Review</button></div>
         </div>
         <div class="kpiGrid">
-          <div class="kpi"><div class="kpiLabel">Fuel Used</div><div id="reviewFuelUsed" class="kpiValue">N/A</div><div class="kpiSub">Last 6 months</div></div>
+          <div class="kpi"><div class="kpiLabel">Fuel Used</div><div id="reviewFuelUsed" class="kpiValue">N/A</div><div class="kpiSub">Selected range</div></div>
           <div class="kpi"><div class="kpiLabel">MPG</div><div id="reviewMpg" class="kpiValue">N/A</div><div class="kpiSub">Trip distance vs fuel used</div></div>
           <div class="kpi"><div class="kpiLabel">Fuel Cost</div><div id="reviewFuelCost" class="kpiValue">N/A</div><div class="kpiSub">Based on current pricing</div></div>
           <div class="kpi"><div class="kpiLabel">Idle Cost</div><div id="reviewIdleCost" class="kpiValue">N/A</div><div class="kpiSub">Estimated or actual idle fuel</div></div>
