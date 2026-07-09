@@ -63,7 +63,7 @@
     <div id="rulesPanel" class="rulesPanel hidden">
       <p class="rulesTitle">How This Dashboard Works</p>
       <ul class="rulesList">
-        <li><strong>Date range</strong>: the dashboard reviews the last 6 months by default. Use Custom to select another date range for fuel, trip, idle, and stop activity.</li>
+        <li><strong>Date range</strong>: the dashboard reviews the last 3 months by default. Use Custom to select another date range for fuel, trip, idle, and stop activity.</li>
         <li><strong>Current view</strong>: every card, chart, hot spot, and vehicle result updates to match the group and efficiency filters you choose.</li>
         <li><strong>Total fuel used</strong>: adds up recorded fuel use across the current selected view.</li>
         <li><strong>Fleet MPG and vehicle MPG</strong>: uses trip distance divided by total fuel used, so idling affects MPG the same way it affects real-world fuel economy.</li>
@@ -94,7 +94,7 @@
       <div class="summaryCard neutral"><div class="labelRow"><p class="label">Fleet Fuel Used</p></div><p class="value" id="fleetFuelUsed">0 gal</p><div class="sub" id="fleetFuelSub">Selected range</div></div>
       <div class="summaryCard infoBg"><div class="labelRow"><p class="label">Fleet MPG</p></div><p class="value" id="fleetMpg">N/A</p><div class="sub" id="fleetMpgSub">Waiting for trip distance data</div></div>
       <div class="summaryCard criticalBg"><div class="labelRow"><p class="label">Fuel Cost</p></div><p class="value" id="fleetFuelCost">$0</p><div class="sub" id="fleetCostSub">Based on current settings</div></div>
-      <div class="summaryCard warningBg"><div class="labelRow"><p class="label">Idle Cost</p></div><p class="value" id="fleetIdleCost">$0</p><div class="sub" id="fleetIdleSub">Idle waste over 6 months</div></div>
+      <div class="summaryCard warningBg"><div class="labelRow"><p class="label">Idle Cost</p></div><p class="value" id="fleetIdleCost">$0</p><div class="sub" id="fleetIdleSub">Idle waste over 3 months</div></div>
       <div class="summaryCard healthyBg"><div class="labelRow"><p class="label">CO2 Produced</p></div><p class="value" id="fleetCo2">0 kg</p><div class="sub" id="fleetCo2Sub">Tailpipe estimate</div></div>
     </div>
 
