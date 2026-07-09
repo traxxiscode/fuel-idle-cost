@@ -64,7 +64,7 @@ var fuelWasteDashboard=(function(){
   function trendDirectionText(value){if(Math.abs(value)<0.005)return'about the same as';return value>0?fmtCurrency(Math.abs(value))+' higher than':fmtCurrency(Math.abs(value))+' lower than'}
   function trendLine(label,value){return label+' trending '+trendDirectionText(value)+' last month'}
   function trendArrow(value){if(Math.abs(value)<0.005)return '<span class="trendArrowIcon trendFlat" aria-hidden="true">&#8594;</span>';return value>0?'<span class="trendArrowIcon trendUpIcon" aria-hidden="true">&#8593;</span>':'<span class="trendArrowIcon trendDownIcon" aria-hidden="true">&#8595;</span>'}
-  function reviewButton(id){return '<button class="reviewBtn" type="button" data-review="'+esc(id)+'">Open Review</button>'}
+  function reviewButton(id){return '<button class="reviewBtn" type="button" data-review="'+esc(id)+'">Review</button>'}
   function pointFromLocation(point){var lat=toNum(point&&point.latitude!==undefined?point.latitude:(point&&point.Latitude!==undefined?point.Latitude:(point&&point.y!==undefined?point.y:(point&&point.Y!==undefined?point.Y:0)))),lng=toNum(point&&point.longitude!==undefined?point.longitude:(point&&point.Longitude!==undefined?point.Longitude:(point&&point.x!==undefined?point.x:(point&&point.X!==undefined?point.X:0))));return {lat:lat,lng:lng};}
   function firstText(){for(var i=0;i<arguments.length;i++){if(arguments[i]!==undefined&&arguments[i]!==null&&String(arguments[i]).trim())return String(arguments[i]).trim();}return''}
   function fmtMiles(v){return toNum(v)>0?fmtWhole(v)+' mi':'N/A'}
