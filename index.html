@@ -265,7 +265,15 @@
   var panel = document.getElementById('schedulePanel'), status = document.getElementById('reportScheduleStatus');
   var byId = function (id) { return document.getElementById(id); };
   var database = function () { return byId('reportDatabaseInput').value.trim(); };
-  var endpoint = function () { return '/.netlify/functions/fuel-idle-cost-config?db=' + encodeURIComponent(database()); };
+  var functionOrigin = (function () {
+    var scripts = document.getElementsByTagName('script'), i, src;
+    for (i = scripts.length - 1; i >= 0; i--) {
+      src = scripts[i].getAttribute('src') || '';
+      if (src.indexOf('addin.js') !== -1) return new URL(src, window.location.href).origin;
+    }
+    return window.location.origin;
+  }());
+  var endpoint = function () { return functionOrigin + '/.netlify/functions/fuel-idle-cost-config?db=' + encodeURIComponent(database()); };
   function setStatus(message, active) { status.textContent = message; status.className = 'sched-status ' + (active ? 'on' : 'off'); }
   function scheduleFromForm(enabled) { return { enabled: enabled, emails: byId('reportEmailsInput').value.split(',').map(function (value) { return value.trim(); }).filter(Boolean), freq: byId('reportFrequencyInput').value, time: byId('reportTimeInput').value, start: byId('reportStartInput').value, dataRange: byId('reportRangeInput').value }; }
   function populate(schedule) { schedule = schedule || {}; byId('reportEmailsInput').value = (schedule.emails || []).join(', '); byId('reportFrequencyInput').value = schedule.freq || 'weekly'; byId('reportTimeInput').value = schedule.time || '08:00'; byId('reportStartInput').value = schedule.start || new Date().toISOString().slice(0, 10); byId('reportRangeInput').value = schedule.dataRange || 'last_3_months'; setStatus(schedule.enabled ? 'Schedule active for ' + (schedule.emails || []).length + ' recipient(s).' : 'Schedule is inactive. Add recipients and save to activate.', !!schedule.enabled); byId('disableReportScheduleButton').style.display = schedule.enabled ? '' : 'none'; }
