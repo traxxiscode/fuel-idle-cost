@@ -1,0 +1,19 @@
+/index.html
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+
+/addin.js
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+
+/addin.css
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+
+/manifest.json
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

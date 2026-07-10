@@ -63,7 +63,7 @@
     <div id="rulesPanel" class="rulesPanel hidden">
       <p class="rulesTitle">How This Dashboard Works</p>
       <ul class="rulesList">
-        <li><strong>Date range</strong>: the dashboard reviews the last 6 months by default. Use Custom to select another date range for fuel, trip, idle, and stop activity.</li>
+        <li><strong>Date range</strong>: the dashboard reviews the last 3 months by default. Use Custom to select another date range for fuel, trip, idle, and stop activity.</li>
         <li><strong>Current view</strong>: every card, chart, hot spot, and vehicle result updates to match the group and efficiency filters you choose.</li>
         <li><strong>Total fuel used</strong>: adds up recorded fuel use across the current selected view.</li>
         <li><strong>Fleet MPG and vehicle MPG</strong>: uses trip distance divided by total fuel used, so idling affects MPG the same way it affects real-world fuel economy.</li>
@@ -94,7 +94,7 @@
       <div class="summaryCard neutral"><div class="labelRow"><p class="label">Fleet Fuel Used</p></div><p class="value" id="fleetFuelUsed">0 gal</p><div class="sub" id="fleetFuelSub">Selected range</div></div>
       <div class="summaryCard infoBg"><div class="labelRow"><p class="label">Fleet MPG</p></div><p class="value" id="fleetMpg">N/A</p><div class="sub" id="fleetMpgSub">Waiting for trip distance data</div></div>
       <div class="summaryCard criticalBg"><div class="labelRow"><p class="label">Fuel Cost</p></div><p class="value" id="fleetFuelCost">$0</p><div class="sub" id="fleetCostSub">Based on current settings</div></div>
-      <div class="summaryCard warningBg"><div class="labelRow"><p class="label">Idle Cost</p></div><p class="value" id="fleetIdleCost">$0</p><div class="sub" id="fleetIdleSub">Idle waste over 6 months</div></div>
+      <div class="summaryCard warningBg"><div class="labelRow"><p class="label">Idle Cost</p></div><p class="value" id="fleetIdleCost">$0</p><div class="sub" id="fleetIdleSub">Idle waste over 3 months</div></div>
       <div class="summaryCard healthyBg"><div class="labelRow"><p class="label">CO2 Produced</p></div><p class="value" id="fleetCo2">0 kg</p><div class="sub" id="fleetCo2Sub">Tailpipe estimate</div></div>
     </div>
 
@@ -120,10 +120,12 @@
       </div>
       <div class="settingsGrid">
         <div class="settingCard"><span class="controlLabel">Fuel Type</span><select id="fuelTypeInput" class="select"><option value="diesel">Diesel</option><option value="gasoline">Gasoline</option></select><div class="settingHint">This helps estimate emissions for the fuel your fleet uses.</div></div>
-        <div class="settingCard"><span class="controlLabel">Fuel Price</span><input id="fuelPriceInput" class="numberInput" type="number" step="0.01" min="0" value="4.75" /><div class="settingHint" id="fuelPriceHint">Starts at the current 6-month U.S. average and can be edited any time.</div></div>
+        <div class="settingCard"><span class="controlLabel">Fuel Price</span><input id="fuelPriceInput" class="numberInput" type="number" step="0.01" min="0" value="4.75" /><div class="settingHint" id="fuelPriceHint">Starts at the configured U.S. average and can be edited any time.</div></div>
         <div class="settingCard"><span class="controlLabel">Units</span><select id="priceUnitInput" class="select"><option value="gallon">Per gallon</option><option value="liter">Per liter</option></select><div class="settingHint" id="priceUnitHint">Choose imperial or metric units for the dashboard.</div></div>
         <div class="settingCard"><span class="controlLabel">Idle Burn Rate</span><input id="idleBurnRateInput" class="numberInput" type="number" step="0.1" min="0" value="0.9" /><div class="settingHint" id="idleBurnRateHint">Use this when recorded idle fuel is not available.</div></div>
         <div class="settingCard"><span class="controlLabel">Update Dashboard</span><button id="applySettingsButton" class="btn btnSecondary" type="button">Refresh Totals</button><div class="settingHint" id="settingsSummary">These settings change the cost and emissions shown in the dashboard.</div></div>
+        <div class="settingCard"><span class="controlLabel">Scheduled CSV Report</span><input id="reportDatabaseInput" class="search" type="text" placeholder="MyGeotab database" /><input id="reportEmailsInput" class="search" type="text" placeholder="recipient@example.com, ..." /><select id="reportFrequencyInput" class="select"><option value="weekly">Weekly</option><option value="daily">Daily</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option></select><input id="reportTimeInput" class="numberInput" type="time" value="08:00" /><button id="saveReportScheduleButton" class="btn btnSecondary" type="button">Save Schedule</button><div class="settingHint" id="reportScheduleStatus">Reports are sent by the server using recipients stored in Firestore.</div></div>
+        <div class="settingCard"><span class="controlLabel">Scheduled CSV Report</span><input id="reportEmailsInput" class="search" type="text" placeholder="recipient@example.com, ..." /><select id="reportFrequencyInput" class="select"><option value="weekly">Weekly</option><option value="daily">Daily</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option></select><input id="reportTimeInput" class="numberInput" type="time" value="08:00" /><button id="saveReportScheduleButton" class="btn btnSecondary" type="button">Save Schedule</button><div class="settingHint" id="reportScheduleStatus">Reports are sent by the server using recipients stored in Firestore.</div></div>
       </div>
     </div>
 
@@ -219,5 +221,18 @@
   </div>
 </div>
 <script src="addin.js"></script>
+<script>
+document.getElementById('saveReportScheduleButton').addEventListener('click', function () {
+  var database = document.getElementById('reportDatabaseInput').value.trim();
+  var emails = document.getElementById('reportEmailsInput').value.split(',').map(function (value) { return value.trim(); }).filter(Boolean);
+  var status = document.getElementById('reportScheduleStatus');
+  if (!database) { status.textContent = 'Enter the MyGeotab database name before saving.'; return; }
+  status.textContent = 'Saving schedule...';
+  fetch('/.netlify/functions/fuel-idle-cost-config?db=' + encodeURIComponent(database), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schedule: { enabled: emails.length > 0, emails: emails, freq: document.getElementById('reportFrequencyInput').value, time: document.getElementById('reportTimeInput').value, start: new Date().toISOString().slice(0, 10), dataRange: 'last_3_months' } })
+  }).then(function (response) { if (!response.ok) throw new Error(); return response.json(); }).then(function () { status.textContent = emails.length ? 'Schedule saved.' : 'Schedule disabled.'; }).catch(function () { status.textContent = 'Could not save the schedule. Confirm the Netlify deployment and Firebase variables.'; });
+});
+</script>
 </body>
 </html>
