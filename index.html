@@ -260,31 +260,5 @@
   </div>
 </div>
 <script src="addin.js"></script>
-<script>
-(function () {
-  var panel = document.getElementById('schedulePanel'), status = document.getElementById('reportScheduleStatus');
-  var byId = function (id) { return document.getElementById(id); };
-  var database = function () { return byId('reportDatabaseInput').value.trim(); };
-  var functionOrigin = (function () {
-    var scripts = document.getElementsByTagName('script'), i, src;
-    for (i = scripts.length - 1; i >= 0; i--) {
-      src = scripts[i].getAttribute('src') || '';
-      if (src.indexOf('addin.js') !== -1) return new URL(src, window.location.href).origin;
-    }
-    return window.location.origin;
-  }());
-  var endpoint = function () { return functionOrigin + '/.netlify/functions/fuel-idle-cost-config?db=' + encodeURIComponent(database()); };
-  function setStatus(message, active) { status.textContent = message; status.className = 'sched-status ' + (active ? 'on' : 'off'); }
-  function scheduleFromForm(enabled) { return { enabled: enabled, emails: byId('reportEmailsInput').value.split(',').map(function (value) { return value.trim(); }).filter(Boolean), freq: byId('reportFrequencyInput').value, time: byId('reportTimeInput').value, start: byId('reportStartInput').value, dataRange: byId('reportRangeInput').value }; }
-  function populate(schedule) { schedule = schedule || {}; byId('reportEmailsInput').value = (schedule.emails || []).join(', '); byId('reportFrequencyInput').value = schedule.freq || 'weekly'; byId('reportTimeInput').value = schedule.time || '08:00'; byId('reportStartInput').value = schedule.start || new Date().toISOString().slice(0, 10); byId('reportRangeInput').value = schedule.dataRange || 'last_3_months'; setStatus(schedule.enabled ? 'Schedule active for ' + (schedule.emails || []).length + ' recipient(s).' : 'Schedule is inactive. Add recipients and save to activate.', !!schedule.enabled); byId('disableReportScheduleButton').style.display = schedule.enabled ? '' : 'none'; }
-  function load() { if (!database()) { setStatus('Waiting for the MyGeotab database session.', false); return; } setStatus('Loading schedule...', false); fetch(endpoint()).then(function (response) { if (!response.ok) throw new Error(); return response.json(); }).then(function (data) { populate(data.config && data.config.schedule); }).catch(function () { setStatus('Could not load the schedule. Confirm the Netlify deployment and Firebase variables.', false); }); }
-  function save(enabled) { var schedule = scheduleFromForm(enabled); if (!database()) { setStatus('Waiting for the MyGeotab database session.', false); return; } if (enabled && !schedule.emails.length) { setStatus('Add at least one recipient email before saving.', false); return; } setStatus(enabled ? 'Saving schedule...' : 'Disabling schedule...', false); fetch(endpoint(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schedule: schedule }) }).then(function (response) { if (!response.ok) throw new Error(); return response.json(); }).then(function (data) { populate(data.config && data.config.schedule); }).catch(function () { setStatus('Could not save the schedule.', false); }); }
-  byId('scheduleButton').addEventListener('click', function () { var open = !panel.classList.contains('open'); panel.classList.toggle('open', open); byId('scheduleButton').classList.toggle('active-btn', open); if (open) load(); });
-  byId('closeScheduleButton').addEventListener('click', function () { panel.classList.remove('open'); byId('scheduleButton').classList.remove('active-btn'); });
-  byId('saveReportScheduleButton').addEventListener('click', function () { save(true); });
-  byId('disableReportScheduleButton').addEventListener('click', function () { save(false); });
-  document.addEventListener('fuel-idle-session', load);
-}());
-</script>
 </body>
 </html>
