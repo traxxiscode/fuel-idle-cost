@@ -53,6 +53,7 @@
           </div>
         </div>
         <button id="rulesButton" class="btn btnSecondary" type="button">How This Dashboard Works</button>
+        <button id="scheduleButton" class="btn btnSecondary" type="button">Schedule Report</button>
         <button id="exportButton" class="btn btnSecondary">Export CSV</button>
         <button id="exportPdfButton" class="btn btnSecondary">Export PDF</button>
         <button id="retryButton" class="btn btnSecondary hidden">Retry</button>
@@ -74,6 +75,19 @@
         <li><strong>Trending</strong>: compares this month&rsquo;s projected full-month pace with last month so you can quickly see whether fuel cost and idle cost are heading up or down.</li>
         <li><strong>CO2 produced</strong>: estimates tailpipe emissions from the fuel used and the fuel type you select.</li>
       </ul>
+    </div>
+    <div id="schedulePanel" class="schedulePanel hidden">
+      <div class="schedulePanelTop"><div><p class="rulesTitle">Schedule CSV Report</p><p class="settingHint">Email the Fuel Waste &amp; Idle Cost report automatically. Schedule times use Eastern Time.</p></div><button id="closeScheduleButton" class="closeBtn" type="button">Close</button></div>
+      <div class="scheduleGrid">
+        <label>MyGeotab Database<input id="reportDatabaseInput" class="search" type="text" readonly /></label>
+        <label>Recipients <input id="reportEmailsInput" class="search" type="text" placeholder="recipient@example.com, recipient2@example.com" /></label>
+        <label>Frequency<select id="reportFrequencyInput" class="select"><option value="weekly">Weekly</option><option value="daily">Daily</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option></select></label>
+        <label>Send time<input id="reportTimeInput" class="numberInput" type="time" value="08:00" /></label>
+        <label>Start date<input id="reportStartInput" class="numberInput" type="date" /></label>
+        <label>Report range<select id="reportRangeInput" class="select"><option value="last_3_months">Last 3 months</option><option value="last_month">Last month</option><option value="last_week">Last week</option></select></label>
+      </div>
+      <div id="reportScheduleStatus" class="settingHint">Loading schedule…</div>
+      <div class="scheduleActions"><button id="disableReportScheduleButton" class="btn btnSecondary" type="button">Disable Schedule</button><button id="saveReportScheduleButton" class="btn btnPrimary" type="button">Save Schedule</button></div>
     </div>
   </div>
 
@@ -124,7 +138,6 @@
         <div class="settingCard"><span class="controlLabel">Units</span><select id="priceUnitInput" class="select"><option value="gallon">Per gallon</option><option value="liter">Per liter</option></select><div class="settingHint" id="priceUnitHint">Choose imperial or metric units for the dashboard.</div></div>
         <div class="settingCard"><span class="controlLabel">Idle Burn Rate</span><input id="idleBurnRateInput" class="numberInput" type="number" step="0.1" min="0" value="0.9" /><div class="settingHint" id="idleBurnRateHint">Use this when recorded idle fuel is not available.</div></div>
         <div class="settingCard"><span class="controlLabel">Update Dashboard</span><button id="applySettingsButton" class="btn btnSecondary" type="button">Refresh Totals</button><div class="settingHint" id="settingsSummary">These settings change the cost and emissions shown in the dashboard.</div></div>
-        <div class="settingCard"><span class="controlLabel">Scheduled CSV Report</span><input id="reportDatabaseInput" class="search" type="text" placeholder="MyGeotab database" /><input id="reportEmailsInput" class="search" type="text" placeholder="recipient@example.com, ..." /><select id="reportFrequencyInput" class="select"><option value="weekly">Weekly</option><option value="daily">Daily</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option></select><input id="reportTimeInput" class="numberInput" type="time" value="08:00" /><button id="saveReportScheduleButton" class="btn btnSecondary" type="button">Save Schedule</button><div class="settingHint" id="reportScheduleStatus">Reports are sent by the server using recipients stored in Firestore.</div></div>
         <div class="settingCard"><span class="controlLabel">Scheduled CSV Report</span><input id="reportEmailsInput" class="search" type="text" placeholder="recipient@example.com, ..." /><select id="reportFrequencyInput" class="select"><option value="weekly">Weekly</option><option value="daily">Daily</option><option value="biweekly">Every 2 weeks</option><option value="monthly">Monthly</option></select><input id="reportTimeInput" class="numberInput" type="time" value="08:00" /><button id="saveReportScheduleButton" class="btn btnSecondary" type="button">Save Schedule</button><div class="settingHint" id="reportScheduleStatus">Reports are sent by the server using recipients stored in Firestore.</div></div>
       </div>
     </div>
@@ -222,17 +235,22 @@
 </div>
 <script src="addin.js"></script>
 <script>
-document.getElementById('saveReportScheduleButton').addEventListener('click', function () {
-  var database = document.getElementById('reportDatabaseInput').value.trim();
-  var emails = document.getElementById('reportEmailsInput').value.split(',').map(function (value) { return value.trim(); }).filter(Boolean);
-  var status = document.getElementById('reportScheduleStatus');
-  if (!database) { status.textContent = 'Enter the MyGeotab database name before saving.'; return; }
-  status.textContent = 'Saving schedule...';
-  fetch('/.netlify/functions/fuel-idle-cost-config?db=' + encodeURIComponent(database), {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ schedule: { enabled: emails.length > 0, emails: emails, freq: document.getElementById('reportFrequencyInput').value, time: document.getElementById('reportTimeInput').value, start: new Date().toISOString().slice(0, 10), dataRange: 'last_3_months' } })
-  }).then(function (response) { if (!response.ok) throw new Error(); return response.json(); }).then(function () { status.textContent = emails.length ? 'Schedule saved.' : 'Schedule disabled.'; }).catch(function () { status.textContent = 'Could not save the schedule. Confirm the Netlify deployment and Firebase variables.'; });
-});
+(function () {
+  var panel = document.getElementById('schedulePanel'), status = document.getElementById('reportScheduleStatus');
+  var byId = function (id) { return document.getElementById(id); };
+  var database = function () { return byId('reportDatabaseInput').value.trim(); };
+  var endpoint = function () { return '/.netlify/functions/fuel-idle-cost-config?db=' + encodeURIComponent(database()); };
+  function setStatus(message) { status.textContent = message; }
+  function scheduleFromForm(enabled) { return { enabled: enabled, emails: byId('reportEmailsInput').value.split(',').map(function (value) { return value.trim(); }).filter(Boolean), freq: byId('reportFrequencyInput').value, time: byId('reportTimeInput').value, start: byId('reportStartInput').value, dataRange: byId('reportRangeInput').value }; }
+  function populate(schedule) { schedule = schedule || {}; byId('reportEmailsInput').value = (schedule.emails || []).join(', '); byId('reportFrequencyInput').value = schedule.freq || 'weekly'; byId('reportTimeInput').value = schedule.time || '08:00'; byId('reportStartInput').value = schedule.start || new Date().toISOString().slice(0, 10); byId('reportRangeInput').value = schedule.dataRange || 'last_3_months'; setStatus(schedule.enabled ? 'Active for ' + (schedule.emails || []).length + ' recipient(s).' : 'Schedule is inactive. Add recipients and save to activate.'); }
+  function load() { if (!database()) { setStatus('Waiting for the MyGeotab database session…'); return; } setStatus('Loading schedule…'); fetch(endpoint()).then(function (response) { if (!response.ok) throw new Error(); return response.json(); }).then(function (data) { populate(data.config && data.config.schedule); }).catch(function () { setStatus('Could not load the schedule. Confirm the Netlify deployment and Firebase variables.'); }); }
+  function save(enabled) { var schedule = scheduleFromForm(enabled); if (!database()) { setStatus('Waiting for the MyGeotab database session…'); return; } if (enabled && !schedule.emails.length) { setStatus('Add at least one recipient email before saving.'); return; } setStatus(enabled ? 'Saving schedule…' : 'Disabling schedule…'); fetch(endpoint(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schedule: schedule }) }).then(function (response) { if (!response.ok) throw new Error(); return response.json(); }).then(function (data) { populate(data.config && data.config.schedule); }).catch(function () { setStatus('Could not save the schedule.'); }); }
+  byId('scheduleButton').addEventListener('click', function () { panel.classList.toggle('hidden'); if (!panel.classList.contains('hidden')) load(); });
+  byId('closeScheduleButton').addEventListener('click', function () { panel.classList.add('hidden'); });
+  byId('saveReportScheduleButton').addEventListener('click', function () { save(true); });
+  byId('disableReportScheduleButton').addEventListener('click', function () { save(false); });
+  document.addEventListener('fuel-idle-session', load);
+}());
 </script>
 </body>
 </html>
